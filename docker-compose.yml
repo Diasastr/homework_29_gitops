@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # This service defines the H2 database.
+  h2database:
+    image: oscarfonts/h2
+    ports:
+      - "1521:1521" # Expose the H2 TCP server port
+      - "81:81"     # Expose the H2 Console port
+    volumes:
+      - h2_data:/opt/h2-data
+    environment:
+      - H2_OPTIONS=-ifNotExists # Create the database if it doesn't exist
+      - WEB_ALLOW_OTHERS=true   # Allow connections from other services
+      - WEB_PORT=81             # Set the web console port
+
+  # This service builds and runs the Angular front-end.
+  angular-frontend:
+    build:
+      context: ./angular
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+
+  # This service builds and runs the Spring Boot application.
+  spring-boot-app:
+    build:
+      context: ./java
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:h2:tcp://h2database:1521/~/test;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.h2.Driver
+      - SPRING_DATASOURCE_USERNAME=sa
+      - SPRING_DATASOURCE_PASSWORD=
+    depends_on:
+      - h2database
+    ports:
+      - "8080:8080"
+
+volumes:
+  h2_data:
